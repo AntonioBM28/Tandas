@@ -1,0 +1,191 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum RolTanda {
+  ADMIN
+  MIEMBRO
+}
+
+enum EstadoMiembro {
+  ACTIVO
+  INACTIVO
+  EXPULSADO
+}
+
+enum FrecuenciaTanda {
+  SEMANAL
+  QUINCENAL
+  MENSUAL
+}
+
+enum EstadoTanda {
+  ARMANDO
+  ACTIVA
+  FINALIZADA
+  CANCELADA
+}
+
+enum EstadoPago {
+  PENDIENTE
+  PAGADO
+  ATRASADO
+}
+
+enum EstadoInvitacion {
+  ACTIVA
+  USADA
+  EXPIRADA
+  CANCELADA
+}
+
+enum TipoNotificacion {
+  RECORDATORIO_PAGO
+  PAGO_RECIBIDO
+  TURNO_PROXIMO
+  TANDA_INICIADA
+  TANDA_FINALIZADA
+  MIEMBRO_UNIDO
+}
+
+model Usuario {
+  id            String   @id @default(uuid())
+  email         String   @unique
+  passwordHash  String   @map("password_hash")
+  nombre        String
+  telefono      String?
+  fotoPerfil    String?  @map("foto_perfil")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  tandasComoAdmin      Tanda[]              @relation("TandaAdmin")
+  membresias           MiembroTanda[]
+  tokensRefresco       TokenRefresco[]
+  invitacionesCreadas  InvitacionTanda[]    @relation("InvitacionCreador")
+  notificaciones       Notificacion[]
+
+  @@map("usuarios")
+}
+
+model TokenRefresco {
+  id          String   @id @default(uuid())
+  tokenHash   String   @map("token_hash")
+  usuarioId   String   @map("usuario_id")
+  usuario     Usuario  @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  revocado    Boolean  @default(false)
+  expiraEn    DateTime @map("expira_en")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@index([usuarioId])
+  @@map("tokens_refresco")
+}
+
+model Tanda {
+  id                String          @id @default(uuid())
+  nombre            String
+  descripcion       String?
+  montoAportacion   Decimal         @map("monto_aportacion") @db.Decimal(10, 2)
+  frecuencia        FrecuenciaTanda
+  numParticipantes  Int             @map("num_participantes")
+  fechaInicio       DateTime?       @map("fecha_inicio")
+  estado            EstadoTanda     @default(ARMANDO)
+  adminId           String          @map("admin_id")
+  admin             Usuario         @relation("TandaAdmin", fields: [adminId], references: [id])
+  createdAt         DateTime        @default(now()) @map("created_at")
+  updatedAt         DateTime        @updatedAt @map("updated_at")
+
+  miembros      MiembroTanda[]
+  ciclos        CicloPago[]
+  invitaciones  InvitacionTanda[]
+
+  @@map("tandas")
+}
+
+model MiembroTanda {
+  id           String        @id @default(uuid())
+  tandaId      String        @map("tanda_id")
+  tanda        Tanda         @relation(fields: [tandaId], references: [id], onDelete: Cascade)
+  usuarioId    String        @map("usuario_id")
+  usuario      Usuario       @relation(fields: [usuarioId], references: [id])
+  rol          RolTanda      @default(MIEMBRO)
+  turnoOrden   Int?          @map("turno_orden")
+  estado       EstadoMiembro @default(ACTIVO)
+  fechaUnion   DateTime      @default(now()) @map("fecha_union")
+
+  pagosRealizados        Pago[]      @relation("PagosDelMiembro")
+  ciclosComoBeneficiario CicloPago[] @relation("TurnoBeneficiario")
+
+  @@unique([tandaId, usuarioId])
+  @@unique([tandaId, turnoOrden])
+  @@map("miembros_tanda")
+}
+
+model InvitacionTanda {
+  id            String           @id @default(uuid())
+  tandaId       String           @map("tanda_id")
+  tanda         Tanda            @relation(fields: [tandaId], references: [id], onDelete: Cascade)
+  codigo        String           @unique
+  creadoPorId   String           @map("creado_por_id")
+  creadoPor     Usuario          @relation("InvitacionCreador", fields: [creadoPorId], references: [id])
+  estado        EstadoInvitacion @default(ACTIVA)
+  usosMaximos   Int              @default(1) @map("usos_maximos")
+  usosActuales  Int              @default(0) @map("usos_actuales")
+  expiraEn      DateTime?        @map("expira_en")
+  createdAt     DateTime         @default(now()) @map("created_at")
+
+  @@index([tandaId])
+  @@map("invitaciones_tanda")
+}
+
+model CicloPago {
+  id                   String       @id @default(uuid())
+  tandaId              String       @map("tanda_id")
+  tanda                Tanda        @relation(fields: [tandaId], references: [id], onDelete: Cascade)
+  numeroCiclo          Int          @map("numero_ciclo")
+  fechaLimite          DateTime     @map("fecha_limite")
+  turnoBeneficiarioId  String       @map("turno_beneficiario_id")
+  turnoBeneficiario    MiembroTanda @relation("TurnoBeneficiario", fields: [turnoBeneficiarioId], references: [id])
+  cerrado              Boolean      @default(false)
+  createdAt            DateTime     @default(now()) @map("created_at")
+
+  pagos Pago[]
+
+  @@unique([tandaId, numeroCiclo])
+  @@map("ciclos_pago")
+}
+
+model Pago {
+  id             String       @id @default(uuid())
+  cicloPagoId    String       @map("ciclo_pago_id")
+  cicloPago      CicloPago    @relation(fields: [cicloPagoId], references: [id], onDelete: Cascade)
+  miembroTandaId String       @map("miembro_tanda_id")
+  miembroTanda   MiembroTanda @relation("PagosDelMiembro", fields: [miembroTandaId], references: [id])
+  monto          Decimal      @db.Decimal(10, 2)
+  fechaPago      DateTime?    @map("fecha_pago")
+  estado         EstadoPago   @default(PENDIENTE)
+  createdAt      DateTime     @default(now()) @map("created_at")
+  updatedAt      DateTime     @updatedAt @map("updated_at")
+
+  @@unique([cicloPagoId, miembroTandaId])
+  @@map("pagos")
+}
+
+model Notificacion {
+  id        String           @id @default(uuid())
+  usuarioId String           @map("usuario_id")
+  usuario   Usuario          @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  tipo      TipoNotificacion
+  mensaje   String
+  leido     Boolean          @default(false)
+  metadata  Json?
+  createdAt DateTime         @default(now()) @map("created_at")
+
+  @@index([usuarioId, leido])
+  @@map("notificaciones")
+}
