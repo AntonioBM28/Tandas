@@ -6,9 +6,11 @@ import '../../features/auth/presentation/screens/login_screen.dart';
 import '../../features/auth/presentation/screens/registro_screen.dart';
 import '../../features/tandas/presentation/screens/home_screen.dart';
 import '../../features/tandas/presentation/screens/crear_tanda_screen.dart';
+import '../../features/tandas/presentation/screens/editar_tanda_screen.dart';
 import '../../features/tandas/presentation/screens/tanda_detalle_screen.dart';
 import '../../features/tandas/presentation/screens/miembros_lista_screen.dart';
 import '../../features/tandas/presentation/screens/agregar_miembro_screen.dart';
+import '../../features/tandas/presentation/screens/historial_ciclos_screen.dart';
 
 final appRouter = GoRouter(
   initialLocation: '/splash',
@@ -39,20 +41,38 @@ final appRouter = GoRouter(
         final id = state.pathParameters['id']!;
         return TandaDetalleScreen(id: id);
       },
-    ),
-    GoRoute(
-      path: '/tandas/:id/miembros',
-      builder: (context, state) {
-        final id = state.pathParameters['id']!;
-        return MiembrosListaScreen(id: id);
-      },
-    ),
-    GoRoute(
-      path: '/tandas/:id/miembros/agregar',
-      builder: (context, state) {
-        final id = state.pathParameters['id']!;
-        return AgregarMiembroScreen(id: id);
-      },
+      routes: [
+        GoRoute(
+          path: 'editar',
+          builder: (context, state) {
+            final id = state.pathParameters['id']!;
+            return EditarTandaScreen(tandaId: id);
+          },
+        ),
+        GoRoute(
+          path: 'historial',
+          builder: (context, state) {
+            final id = state.pathParameters['id']!;
+            return HistorialCiclosScreen(tandaId: id);
+          },
+        ),
+        GoRoute(
+          path: 'miembros',
+          builder: (context, state) {
+            final id = state.pathParameters['id']!;
+            return MiembrosListaScreen(id: id);
+          },
+          routes: [
+            GoRoute(
+              path: 'agregar',
+              builder: (context, state) {
+                final id = state.pathParameters['id']!;
+                return AgregarMiembroScreen(id: id);
+              },
+            ),
+          ],
+        ),
+      ],
     ),
   ],
 );

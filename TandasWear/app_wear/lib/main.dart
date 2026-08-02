@@ -1,13 +1,18 @@
 import 'package:flutter/material.dart';
 import 'core/theme/app_colors.dart';
+import 'core/wear/wear_notificaciones_state.dart';
 import 'features/dashboard/presentation/screens/main_wear_screen.dart';
 
 void main() {
-  runApp(const AppWear());
+  final wearState = WearNotificacionesState();
+  wearState.iniciar();
+  runApp(AppWear(wearState: wearState));
 }
 
 class AppWear extends StatelessWidget {
-  const AppWear({super.key});
+  final WearNotificacionesState wearState;
+
+  const AppWear({super.key, required this.wearState});
 
   @override
   Widget build(BuildContext context) {
@@ -23,7 +28,7 @@ class AppWear extends StatelessWidget {
         ),
         useMaterial3: true,
       ),
-      home: const MainWearScreen(),
+      home: MainWearScreen(state: wearState),
     );
   }
 }

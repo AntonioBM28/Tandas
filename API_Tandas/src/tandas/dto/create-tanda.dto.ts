@@ -4,6 +4,7 @@ import {
   IsEnum,
   IsInt,
   IsPositive,
+  IsBoolean,
   Min,
   MaxLength,
 } from 'class-validator';
@@ -33,4 +34,8 @@ export class CreateTandaDto {
   @IsInt()
   @Min(2, { message: 'Debe haber al menos 2 participantes' })
   numParticipantes!: number;
+
+  @IsOptional()
+  @IsBoolean({ message: 'unirseComoMiembro debe ser verdadero o falso' })
+  unirseComoMiembro?: boolean;
 }

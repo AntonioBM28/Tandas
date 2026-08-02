@@ -9,11 +9,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:app_wear/main.dart';
+import 'package:app_wear/core/wear/wear_notificaciones_state.dart';
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
+  testWidgets('App builds and shows the dashboard', (WidgetTester tester) async {
     // Build our app and trigger a frame.
-    await tester.pumpWidget(const AppWear());
+    await tester.pumpWidget(AppWear(wearState: WearNotificacionesState()));
 
     // Verify that our main text appears.
     expect(find.byType(MaterialApp), findsOneWidget);

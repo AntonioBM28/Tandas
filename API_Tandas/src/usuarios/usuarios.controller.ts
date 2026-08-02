@@ -11,6 +11,7 @@ import {
   UploadedFile,
   ParseUUIDPipe,
   BadRequestException,
+  Query,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { UsuariosService } from './usuarios.service';
@@ -78,6 +79,16 @@ export class UsuariosController {
     // Store relative path (e.g. /uploads/perfiles/uuid.jpg)
     const relativePath = `/uploads/perfiles/${file.filename}`;
     return this.usuariosService.updateFotoPerfil(req.user.sub, relativePath);
+  }
+
+  /**
+   * GET /usuarios/buscar?q=...
+   * Búsqueda parcial por correo (protegido). Devuelve una lista de coincidencias.
+   */
+  @UseGuards(JwtAuthGuard)
+  @Get('buscar')
+  async buscar(@Query('q') q: string) {
+    return this.usuariosService.buscarUsuarios(q ?? '');
   }
 
   /**

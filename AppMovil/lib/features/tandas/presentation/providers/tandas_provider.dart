@@ -43,6 +43,7 @@ class TandasProvider with ChangeNotifier {
     required double montoAportacion,
     required String frecuencia,
     required int numParticipantes,
+    bool unirseComoMiembro = false,
   }) async {
     _setLoading(true);
     _setError(null);
@@ -53,6 +54,7 @@ class TandasProvider with ChangeNotifier {
         montoAportacion: montoAportacion,
         frecuencia: frecuencia,
         numParticipantes: numParticipantes,
+        unirseComoMiembro: unirseComoMiembro,
       );
       
       // La insertamos al inicio de la lista
@@ -64,5 +66,10 @@ class TandasProvider with ChangeNotifier {
       _setLoading(false);
       return false;
     }
+  }
+
+  void eliminarTandaLocal(String tandaId) {
+    _tandas.removeWhere((t) => t.id == tandaId);
+    notifyListeners();
   }
 }

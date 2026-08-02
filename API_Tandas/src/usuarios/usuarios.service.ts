@@ -52,6 +52,28 @@ export class UsuariosService {
   }
 
   /**
+   * Busca usuarios cuyo correo contenga el texto dado (coincidencia parcial,
+   * insensible a mayúsculas). Devuelve solo campos públicos.
+   */
+  async buscarUsuarios(query: string) {
+    const q = query.trim().toLowerCase();
+    if (q.length < 2) return [];
+
+    return this.prisma.usuario.findMany({
+      where: { email: { contains: q, mode: 'insensitive' } },
+      select: {
+        id: true,
+        nombre: true,
+        email: true,
+        telefono: true,
+        fotoPerfil: true,
+      },
+      orderBy: { email: 'asc' },
+      take: 10,
+    });
+  }
+
+  /**
    * Updates nombre and/or telefono.
    */
   async update(id: string, dto: UpdateUsuarioDto): Promise<UsuarioSinPassword> {

@@ -83,6 +83,23 @@ export class TandasController {
     return this.tandasService.activar(id, usuario.sub);
   }
 
+  @Patch(':id/avanzar-ciclo')
+  avanzarCiclo(
+    @Param('id', ParseUUIDPipe) id: string,
+    @UsuarioActual() usuario: JwtPayload,
+  ) {
+    return this.tandasService.avanzarCiclo(id, usuario.sub);
+  }
+
+  @Delete(':id/turnos/:turnoTandaId')
+  quitarTurno(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Param('turnoTandaId', ParseUUIDPipe) turnoTandaId: string,
+    @UsuarioActual() usuario: JwtPayload,
+  ) {
+    return this.tandasService.quitarTurno(id, turnoTandaId, usuario.sub);
+  }
+
   @Post(':id/miembros')
   addMiembro(
     @Param('id', ParseUUIDPipe) id: string,
@@ -98,6 +115,14 @@ export class TandasController {
     @UsuarioActual() usuario: JwtPayload,
   ) {
     return this.tandasService.getMiembros(id, usuario.sub);
+  }
+
+  @Delete(':id/miembros/salir')
+  salirDeTanda(
+    @Param('id', ParseUUIDPipe) id: string,
+    @UsuarioActual() usuario: JwtPayload,
+  ) {
+    return this.tandasService.salirDeTanda(id, usuario.sub);
   }
 
   @Delete(':id/miembros/:miembroTandaId')

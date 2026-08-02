@@ -10,6 +10,8 @@ import {
 import { CiclosPagoService } from './ciclos-pago.service';
 import { CreateCicloPagoDto } from './dto/create-ciclo-pago.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { UsuarioActual } from '../auth/decorators/usuario-actual.decorator';
+import { JwtPayload } from '../auth/strategies/jwt.strategy';
 
 @UseGuards(JwtAuthGuard)
 @Controller('ciclos-pago')
@@ -22,8 +24,11 @@ export class CiclosPagoController {
   }
 
   @Get('tanda/:tandaId')
-  findByTanda(@Param('tandaId', ParseUUIDPipe) tandaId: string) {
-    return this.ciclosPagoService.findByTanda(tandaId);
+  findByTanda(
+    @Param('tandaId', ParseUUIDPipe) tandaId: string,
+    @UsuarioActual() usuario: JwtPayload,
+  ) {
+    return this.ciclosPagoService.findByTanda(tandaId, usuario.sub);
   }
 
   @Get(':id')

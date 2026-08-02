@@ -10,6 +10,7 @@ import 'features/tandas/domain/repositories/tandas_repository.dart';
 import 'features/tandas/presentation/providers/tandas_provider.dart';
 import 'features/tandas/domain/repositories/tanda_detalle_repository.dart';
 import 'features/tandas/presentation/providers/tanda_detalle_provider.dart';
+import 'core/wear/wear_sync_service.dart';
 
 void main() {
   final storageService = SecureStorageService();
@@ -18,9 +19,17 @@ void main() {
   final tandasRepository = TandasRepository(dioClient);
   final tandaDetalleRepository = TandaDetalleRepository(dioClient);
 
+  // Puente con el reloj: manda los pagos propios pendientes y atiende sus
+  // acciones (pedir sync, reportar un pago). No bloquea el arranque de la
+  // app si no hay sesión o no hay reloj conectado.
+  final wearSyncService = WearSyncService(tandasRepository, tandaDetalleRepository, storageService);
+  wearSyncService.iniciarEscucha();
+  wearSyncService.sincronizar();
+
   runApp(
     MultiProvider(
       providers: [
+        Provider<DioClient>(create: (_) => dioClient),
         ChangeNotifierProvider(create: (_) => AuthProvider(authRepository)),
         ChangeNotifierProvider(create: (_) => TandasProvider(tandasRepository)),
         ChangeNotifierProvider(create: (_) => TandaDetalleProvider(tandaDetalleRepository)),

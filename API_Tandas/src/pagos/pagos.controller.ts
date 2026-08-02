@@ -11,6 +11,8 @@ import {
 import { PagosService } from './pagos.service';
 import { CreatePagoDto, UpdatePagoDto } from './dto/pago.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { UsuarioActual } from '../auth/decorators/usuario-actual.decorator';
+import { JwtPayload } from '../auth/strategies/jwt.strategy';
 
 @UseGuards(JwtAuthGuard)
 @Controller('pagos')
@@ -33,7 +35,11 @@ export class PagosController {
   }
 
   @Patch(':id')
-  update(@Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdatePagoDto) {
-    return this.pagosService.update(id, dto);
+  update(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: UpdatePagoDto,
+    @UsuarioActual() usuario: JwtPayload,
+  ) {
+    return this.pagosService.update(id, dto, usuario.sub);
   }
 }

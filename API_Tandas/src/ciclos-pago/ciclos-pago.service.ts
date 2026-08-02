@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateCicloPagoDto } from './dto/create-ciclo-pago.dto';
 import { CicloPago } from '@prisma/client';
@@ -18,10 +18,36 @@ export class CiclosPagoService {
     });
   }
 
-  async findByTanda(tandaId: string): Promise<CicloPago[]> {
+  async findByTanda(tandaId: string, usuarioId: string): Promise<CicloPago[]> {
+    const tanda = await this.prisma.tanda.findUnique({
+      where: { id: tandaId },
+      include: { miembros: { select: { usuarioId: true } } },
+    });
+    if (!tanda) throw new NotFoundException('Tanda no encontrada');
+
+    const isMember = tanda.miembros.some((m) => m.usuarioId === usuarioId);
+    if (!isMember && tanda.adminId !== usuarioId) {
+      throw new ForbiddenException('No tienes acceso a los ciclos de esta tanda');
+    }
+
     return this.prisma.cicloPago.findMany({
       where: { tandaId },
-      include: { pagos: true, turnoBeneficiario: { include: { usuario: true } } },
+      include: {
+        turnoBeneficiario: {
+          include: {
+            usuario: { select: { id: true, nombre: true, fotoPerfil: true } },
+          },
+        },
+        pagos: {
+          include: {
+            miembroTanda: {
+              include: {
+                usuario: { select: { id: true, nombre: true, fotoPerfil: true } },
+              },
+            },
+          },
+        },
+      },
       orderBy: { numeroCiclo: 'asc' },
     });
   }

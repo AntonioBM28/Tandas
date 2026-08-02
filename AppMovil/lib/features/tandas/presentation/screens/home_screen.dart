@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
+import '../../../auth/presentation/providers/auth_provider.dart';
 import '../../domain/models/tanda.dart';
 import '../providers/tandas_provider.dart';
 
@@ -32,6 +33,34 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     super.dispose();
   }
 
+  Future<void> _confirmarCerrarSesion() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Cerrar sesión'),
+        content: const Text('¿Seguro que deseas cerrar tu sesión?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('Cerrar sesión'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true || !mounted) return;
+
+    await context.read<AuthProvider>().logout();
+
+    if (mounted) {
+      context.go('/login');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -42,10 +71,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         title: const Text('Mis Tandas', style: TextStyle(fontWeight: FontWeight.bold)),
         actions: [
           IconButton(
-            icon: const Icon(Icons.person_outline),
-            onPressed: () {
-              // Navegar al perfil o abrir drawer
-            },
+            icon: const Icon(Icons.logout),
+            tooltip: 'Cerrar sesión',
+            onPressed: _confirmarCerrarSesion,
           ),
         ],
         bottom: TabBar(
@@ -54,8 +82,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           labelColor: theme.colorScheme.primary,
           unselectedLabelColor: theme.colorScheme.onSurfaceVariant,
           tabs: const [
-            Tab(text: 'Todas'),
-            Tab(text: 'Soy Admin'),
+            Tab(text: 'Tandas'),
+            Tab(text: 'Mis Tandas'),
           ],
         ),
       ),
@@ -68,7 +96,11 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
             : TabBarView(
                 controller: _tabController,
                 children: [
-                  _TandaList(tandas: tandasProvider.tandas),
+                  _TandaList(
+                    tandas: tandasProvider.tandas
+                        .where((t) => t.rolDelUsuario == TandaRol.miembro)
+                        .toList(),
+                  ),
                   _TandaList(
                     tandas: tandasProvider.tandas
                         .where((t) => t.rolDelUsuario == TandaRol.admin)

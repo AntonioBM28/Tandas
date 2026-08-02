@@ -1,4 +1,4 @@
-package com.example.app_movil
+package com.tandas.wear
 
 import androidx.annotation.NonNull
 import com.google.android.gms.wearable.MessageClient
@@ -8,8 +8,8 @@ import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
 
-// Puente nativo con la app del reloj vía la Wear OS Data Layer API.
-// Simétrico al MainActivity.kt de TandasWear: mismo nombre de canal y mismo
+// Puente nativo con la app del celular vía la Wear OS Data Layer API.
+// Simétrico al MainActivity.kt de AppMovil: mismo nombre de canal y mismo
 // formato de mensaje (ruta + datos como texto), para que ambos lados se
 // entiendan sin necesitar un paquete de terceros.
 class MainActivity : FlutterActivity(), MessageClient.OnMessageReceivedListener {

@@ -26,6 +26,7 @@ class TandasRepository {
     required double montoAportacion,
     required String frecuencia, // SEMANAL, QUINCENAL, MENSUAL
     required int numParticipantes,
+    bool unirseComoMiembro = false,
   }) async {
     try {
       final response = await _dioClient.dio.post('/tandas', data: {
@@ -34,14 +35,16 @@ class TandasRepository {
         'montoAportacion': montoAportacion,
         'frecuencia': frecuencia,
         'numParticipantes': numParticipantes,
+        'unirseComoMiembro': unirseComoMiembro,
       });
 
       if (response.statusCode == 201 || response.statusCode == 200) {
-        // La API retorna la tanda. Agregamos miRol y numMiembrosActuales manualmente
-        // ya que la respuesta del POST puede que no tenga el mismo formato que mis-tandas
+        // La API retorna la tanda con 'miembros' incluido (puede estar vacío
+        // si el admin decidió no unirse). El admin siempre se muestra como ADMIN.
         final data = response.data;
+        final miembros = data['miembros'] as List? ?? [];
         data['miRol'] = 'ADMIN';
-        data['numMiembrosActuales'] = 1; 
+        data['numMiembrosActuales'] = miembros.length;
         return Tanda.fromJson(data);
       }
       throw Exception('Error al crear tanda');

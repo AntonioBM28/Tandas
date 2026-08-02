@@ -34,6 +34,7 @@ enum EstadoTanda {
 
 enum EstadoPago {
   PENDIENTE
+  REPORTADO // el miembro dice que ya pagó, pendiente de que el admin lo confirme
   PAGADO
   ATRASADO
 }
@@ -101,6 +102,7 @@ model Tanda {
   updatedAt         DateTime        @updatedAt @map("updated_at")
 
   miembros      MiembroTanda[]
+  turnos        TurnoTanda[]
   ciclos        CicloPago[]
   invitaciones  InvitacionTanda[]
 
@@ -114,16 +116,33 @@ model MiembroTanda {
   usuarioId    String        @map("usuario_id")
   usuario      Usuario       @relation(fields: [usuarioId], references: [id])
   rol          RolTanda      @default(MIEMBRO)
-  turnoOrden   Int?          @map("turno_orden")
   estado       EstadoMiembro @default(ACTIVO)
   fechaUnion   DateTime      @default(now()) @map("fecha_union")
 
+  turnos                 TurnoTanda[]
   pagosRealizados        Pago[]      @relation("PagosDelMiembro")
   ciclosComoBeneficiario CicloPago[] @relation("TurnoBeneficiario")
 
   @@unique([tandaId, usuarioId])
-  @@unique([tandaId, turnoOrden])
   @@map("miembros_tanda")
+}
+
+// Un "turno" es un lugar en la rotación de la tanda. Un miembro puede tener
+// varios turnos (varias filas aquí): eso significa que aporta y cobra el
+// bote una vez por cada turno que tenga.
+model TurnoTanda {
+  id             String       @id @default(uuid())
+  tandaId        String       @map("tanda_id")
+  tanda          Tanda        @relation(fields: [tandaId], references: [id], onDelete: Cascade)
+  turnoOrden     Int          @map("turno_orden")
+  miembroTandaId String       @map("miembro_tanda_id")
+  miembroTanda   MiembroTanda @relation(fields: [miembroTandaId], references: [id], onDelete: Cascade)
+  createdAt      DateTime     @default(now()) @map("created_at")
+
+  pagos Pago[]
+
+  @@unique([tandaId, turnoOrden])
+  @@map("turnos_tanda")
 }
 
 model InvitacionTanda {
@@ -166,13 +185,17 @@ model Pago {
   cicloPago      CicloPago    @relation(fields: [cicloPagoId], references: [id], onDelete: Cascade)
   miembroTandaId String       @map("miembro_tanda_id")
   miembroTanda   MiembroTanda @relation("PagosDelMiembro", fields: [miembroTandaId], references: [id])
+  // Cada turno genera su propia obligación de pago por ciclo: un miembro con
+  // 2 turnos tendrá 2 filas de Pago (una por turno) en cada ciclo.
+  turnoTandaId   String       @map("turno_tanda_id")
+  turnoTanda     TurnoTanda   @relation(fields: [turnoTandaId], references: [id], onDelete: Cascade)
   monto          Decimal      @db.Decimal(10, 2)
   fechaPago      DateTime?    @map("fecha_pago")
   estado         EstadoPago   @default(PENDIENTE)
   createdAt      DateTime     @default(now()) @map("created_at")
   updatedAt      DateTime     @updatedAt @map("updated_at")
 
-  @@unique([cicloPagoId, miembroTandaId])
+  @@unique([cicloPagoId, turnoTandaId])
   @@map("pagos")
 }
 

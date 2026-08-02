@@ -3,12 +3,20 @@
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.VIBRATE" />
 
+    <!-- Necesarios para comunicarse con el celular emparejado (Wear OS Data
+         Layer API) una vez que se implemente esa parte. -->
+    <uses-permission android:name="android.permission.BLUETOOTH" android:maxSdkVersion="30" />
+    <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" android:maxSdkVersion="30" />
+    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+
     <application
-        android:label="app_wear"
+        android:label="Tandas"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
-        
-        <meta-data android:name="com.google.android.wearable.standalone" android:value="true" />
+
+        <!-- false: esta app depende de la app complementaria en el celular
+             (Tandas) en vez de funcionar de forma independiente. -->
+        <meta-data android:name="com.google.android.wearable.standalone" android:value="false" />
 
         <activity
             android:name=".MainActivity"

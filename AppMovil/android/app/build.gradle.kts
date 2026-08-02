@@ -42,3 +42,8 @@ android {
 flutter {
     source = "../.."
 }
+
+dependencies {
+    // Wear OS Data Layer API: comunicación con el reloj emparejado.
+    implementation("com.google.android.gms:play-services-wearable:19.0.0")
+}

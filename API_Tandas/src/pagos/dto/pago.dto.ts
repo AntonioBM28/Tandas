@@ -9,6 +9,9 @@ export class CreatePagoDto {
   @IsString()
   miembroTandaId!: string;
 
+  @IsString()
+  turnoTandaId!: string;
+
   @Type(() => Number)
   @IsPositive()
   monto!: number;

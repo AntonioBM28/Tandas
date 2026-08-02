@@ -6,7 +6,7 @@ plugins {
 }
 
 android {
-    namespace = "com.example.app_wear"
+    namespace = "com.tandas.wear"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
@@ -20,11 +20,9 @@ android {
     }
 
     defaultConfig {
-        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
-        applicationId = "com.example.app_wear"
-        // You can update the following values to match your application needs.
-        // For more information, see: https://flutter.dev/to/review-gradle-config.
-        minSdk = 28
+        applicationId = "com.tandas.wear"
+        // Wear OS 3+ recomienda mínimo API 30.
+        minSdk = 30
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
@@ -41,4 +39,9 @@ android {
 
 flutter {
     source = "../.."
+}
+
+dependencies {
+    // Wear OS Data Layer API: comunicación con la app del celular emparejada.
+    implementation("com.google.android.gms:play-services-wearable:19.0.0")
 }

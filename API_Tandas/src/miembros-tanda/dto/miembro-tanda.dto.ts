@@ -1,18 +1,14 @@
-import { IsString, IsOptional, IsEnum, IsInt, Min } from 'class-validator';
+import { IsOptional, IsEnum } from 'class-validator';
 import { RolTanda, EstadoMiembro } from '@prisma/client';
-import { Type } from 'class-transformer';
 
-
+// La gestión de turnos (asignar/quitar) vive en el módulo de tandas
+// (PATCH /tandas/:id/asignar-turno, DELETE /tandas/:id/turnos/:turnoId),
+// ya que un miembro puede tener varios turnos y este endpoint solo edita
+// la fila de membresía en sí (estado y rol).
 export class UpdateMiembroTandaDto {
   @IsOptional()
   @IsEnum(EstadoMiembro)
   estado?: EstadoMiembro;
-
-  @IsOptional()
-  @Type(() => Number)
-  @IsInt()
-  @Min(1)
-  turnoOrden?: number;
 
   @IsOptional()
   @IsEnum(RolTanda)
