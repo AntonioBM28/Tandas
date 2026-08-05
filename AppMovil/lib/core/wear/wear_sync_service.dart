@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart';
+
 import '../../features/tandas/domain/models/tanda.dart';
 import '../../features/tandas/domain/models/tanda_detalle.dart';
 import '../../features/tandas/domain/repositories/tanda_detalle_repository.dart';
@@ -23,7 +25,9 @@ class WearSyncService {
 
   /// Empieza a escuchar al reloj. Se llama una sola vez, al arrancar la app.
   void iniciarEscucha() {
+    debugPrint('[WearSyncService] escuchando mensajes del reloj');
     WearBridge.mensajes.listen((mensaje) async {
+      debugPrint('[WearSyncService] mensaje del reloj: ${mensaje.ruta}');
       switch (mensaje.ruta) {
         case rutaSyncSolicitar:
           await sincronizar();
@@ -49,17 +53,22 @@ class WearSyncService {
   Future<void> sincronizar() async {
     try {
       final userId = await _storageService.getUserId();
+      debugPrint('[WearSyncService] sincronizar() userId=$userId');
       if (userId == null) return;
 
       final tandas = await _tandasRepository.getMisTandas();
       final activas = tandas.where((t) => t.estado == TandaEstado.activa);
+      debugPrint('[WearSyncService] ${tandas.length} tanda(s) en total, ${activas.length} activa(s)');
 
       final items = <TandaWearItem>[];
       for (final tanda in activas) {
         try {
           final detalle = await _tandaDetalleRepository.getTandaDetalle(tanda.id, userId);
           final ciclo = detalle.cicloActual;
-          if (ciclo == null) continue;
+          if (ciclo == null) {
+            debugPrint('[WearSyncService] ${tanda.nombre}: sin ciclo actual');
+            continue;
+          }
 
           for (final pago in ciclo.pagos) {
             if (pago.usuarioId != userId) continue;
@@ -75,18 +84,21 @@ class WearSyncService {
               pagoId: pago.id,
             ));
           }
-        } catch (_) {
+        } catch (e) {
           // Si una tanda falla al cargar su detalle, seguimos con las demás.
+          debugPrint('[WearSyncService] error cargando detalle de ${tanda.nombre}: $e');
           continue;
         }
       }
 
+      debugPrint('[WearSyncService] mandando ${items.length} item(s) al reloj');
       await WearBridge.enviar(
         rutaTandaSync,
         TandaSyncPayload(items: items, generadoEn: DateTime.now()).toJson(),
       );
-    } catch (_) {
+    } catch (e) {
       // Sin sesión activa, sin red, etc.: no es un error fatal para la app.
+      debugPrint('[WearSyncService] sincronizar() falló: $e');
     }
   }
 

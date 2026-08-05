@@ -61,6 +61,21 @@ class AuthRepository {
     }
   }
 
+  /// Confirma, desde el celular ya logueado, un código de 6 dígitos que el
+  /// usuario ve en el reloj — así el reloj recibe su propia sesión.
+  Future<void> confirmarCodigoDispositivo(String codigo) async {
+    try {
+      await _dioClient.dio.post('/auth/dispositivo/confirmar', data: {
+        'codigo': codigo,
+      });
+    } on DioException catch (e) {
+      final msg = e.response?.data?['message'];
+      throw Exception(msg is String ? msg : 'Código inválido o expirado');
+    } catch (e) {
+      throw Exception('Error al vincular el reloj: ${e.toString()}');
+    }
+  }
+
   Future<void> logout() async {
     try {
       final refreshToken = await _storageService.getRefreshToken();

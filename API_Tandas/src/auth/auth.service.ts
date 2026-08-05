@@ -2,13 +2,15 @@ import {
   Injectable,
   ConflictException,
   UnauthorizedException,
+  NotFoundException,
+  BadRequestException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../prisma/prisma.service';
 import { RegistroDto } from './dto/registro.dto';
 import * as bcrypt from 'bcrypt';
-import { Usuario } from '@prisma/client';
+import { Usuario, EstadoCodigoDispositivo, Prisma } from '@prisma/client';
 
 export interface PublicUser {
   id: string;
@@ -155,6 +157,85 @@ export class AuthService {
     } catch (e) {
       // Ignore token decode errors on logout
     }
+  }
+
+  /**
+   * Un dispositivo sin teclado cómodo (el reloj) pide un código de 6
+   * dígitos, vigente unos minutos, para que el usuario lo confirme desde
+   * un dispositivo donde ya tiene sesión (el celular).
+   */
+  async generarCodigoDispositivo(): Promise<{ codigo: string; expiraEn: Date }> {
+    const expiraEn = new Date();
+    expiraEn.setMinutes(expiraEn.getMinutes() + 10);
+
+    for (let intento = 0; intento < 5; intento++) {
+      const codigo = Math.floor(100000 + Math.random() * 900000).toString();
+      try {
+        const creado = await this.prisma.codigoDispositivo.create({
+          data: { codigo, expiraEn },
+        });
+        return { codigo: creado.codigo, expiraEn: creado.expiraEn };
+      } catch (error) {
+        if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+          continue; // código ya en uso, intenta con otro
+        }
+        throw error;
+      }
+    }
+    throw new BadRequestException('No se pudo generar un código, intenta de nuevo');
+  }
+
+  /**
+   * El usuario, ya logueado en el celular, confirma que el código que ve
+   * en el reloj le pertenece.
+   */
+  async confirmarCodigoDispositivo(codigo: string, usuarioId: string): Promise<{ message: string }> {
+    const registro = await this.prisma.codigoDispositivo.findUnique({ where: { codigo } });
+
+    if (!registro || registro.estado !== EstadoCodigoDispositivo.PENDIENTE) {
+      throw new NotFoundException('Código inválido o ya utilizado');
+    }
+    if (registro.expiraEn < new Date()) {
+      throw new BadRequestException('El código expiró, genera uno nuevo desde el reloj');
+    }
+
+    await this.prisma.codigoDispositivo.update({
+      where: { id: registro.id },
+      data: { estado: EstadoCodigoDispositivo.CONFIRMADO, usuarioId },
+    });
+
+    return { message: 'Dispositivo vinculado correctamente' };
+  }
+
+  /**
+   * El reloj pregunta periódicamente si ya lo confirmaron. Una vez
+   * confirmado, se le entregan tokens de sesión reales (iguales a los de
+   * un login normal) y el código se borra para que no se pueda reusar.
+   */
+  async consultarCodigoDispositivo(
+    codigo: string,
+  ): Promise<{ estado: 'PENDIENTE' } | ({ estado: 'CONFIRMADO' } & AuthResponse)> {
+    const registro = await this.prisma.codigoDispositivo.findUnique({
+      where: { codigo },
+      include: { usuario: true },
+    });
+
+    if (!registro) {
+      throw new NotFoundException('Código inválido o expirado');
+    }
+    if (registro.expiraEn < new Date()) {
+      await this.prisma.codigoDispositivo.delete({ where: { id: registro.id } }).catch(() => undefined);
+      throw new NotFoundException('El código expiró, genera uno nuevo desde el reloj');
+    }
+    if (registro.estado === EstadoCodigoDispositivo.PENDIENTE || !registro.usuario) {
+      return { estado: 'PENDIENTE' };
+    }
+
+    const authResponse = await this.generateAuthResponse(registro.usuario);
+    // Un solo uso: ya se entregaron los tokens, el código deja de servir.
+    await this.prisma.codigoDispositivo.delete({ where: { id: registro.id } });
+
+    return { estado: 'CONFIRMADO', ...authResponse };
   }
 
   private async generateAuthResponse(usuario: Usuario): Promise<AuthResponse> {

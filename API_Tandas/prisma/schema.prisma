@@ -70,8 +70,28 @@ model Usuario {
   tokensRefresco       TokenRefresco[]
   invitacionesCreadas  InvitacionTanda[]    @relation("InvitacionCreador")
   notificaciones       Notificacion[]
+  codigosDispositivo   CodigoDispositivo[]
 
   @@map("usuarios")
+}
+
+enum EstadoCodigoDispositivo {
+  PENDIENTE
+  CONFIRMADO
+}
+
+// Código corto de un solo uso para vincular un dispositivo sin teclado
+// cómodo (el reloj) a la sesión de un usuario ya logueado en el celular.
+model CodigoDispositivo {
+  id        String                   @id @default(uuid())
+  codigo    String                   @unique
+  estado    EstadoCodigoDispositivo  @default(PENDIENTE)
+  usuarioId String?                  @map("usuario_id")
+  usuario   Usuario?                 @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  expiraEn  DateTime                 @map("expira_en")
+  createdAt DateTime                 @default(now()) @map("created_at")
+
+  @@map("codigos_dispositivo")
 }
 
 model TokenRefresco {

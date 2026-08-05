@@ -71,6 +71,11 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         title: const Text('Mis Tandas', style: TextStyle(fontWeight: FontWeight.bold)),
         actions: [
           IconButton(
+            icon: const Icon(Icons.watch_outlined),
+            tooltip: 'Vincular reloj',
+            onPressed: () => context.push('/vincular-reloj'),
+          ),
+          IconButton(
             icon: const Icon(Icons.logout),
             tooltip: 'Cerrar sesión',
             onPressed: _confirmarCerrarSesion,

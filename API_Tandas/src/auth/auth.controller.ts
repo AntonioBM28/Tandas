@@ -1,6 +1,8 @@
 import {
   Controller,
   Post,
+  Get,
+  Param,
   Body,
   UseGuards,
   HttpCode,
@@ -12,8 +14,10 @@ import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { RegistroDto } from './dto/registro.dto';
 import { LoginDto } from './dto/login.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
+import { ConfirmarCodigoDispositivoDto } from './dto/codigo-dispositivo.dto';
 import { UsuarioActual } from './decorators/usuario-actual.decorator';
 import { Usuario } from '@prisma/client';
+import { JwtPayload } from './strategies/jwt.strategy';
 
 @Controller('auth')
 export class AuthController {
@@ -49,5 +53,28 @@ export class AuthController {
   ): Promise<{ message: string }> {
     await this.authService.logout(dto.refreshToken);
     return { message: 'Sesión cerrada correctamente' };
+  }
+
+  // Vinculación de dispositivos sin teclado cómodo (el reloj) vía código.
+
+  @Post('dispositivo/generar-codigo')
+  @HttpCode(HttpStatus.OK)
+  async generarCodigoDispositivo() {
+    return this.authService.generarCodigoDispositivo();
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('dispositivo/confirmar')
+  @HttpCode(HttpStatus.OK)
+  async confirmarCodigoDispositivo(
+    @Body() dto: ConfirmarCodigoDispositivoDto,
+    @UsuarioActual() usuario: JwtPayload,
+  ) {
+    return this.authService.confirmarCodigoDispositivo(dto.codigo, usuario.sub);
+  }
+
+  @Get('dispositivo/estado/:codigo')
+  async consultarCodigoDispositivo(@Param('codigo') codigo: string) {
+    return this.authService.consultarCodigoDispositivo(codigo);
   }
 }

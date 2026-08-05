@@ -13,6 +13,10 @@ import 'features/tandas/presentation/providers/tanda_detalle_provider.dart';
 import 'core/wear/wear_sync_service.dart';
 
 void main() {
+  // Necesario porque WearBridge usa un MethodChannel antes de runApp()
+  // (WearSyncService.iniciarEscucha/sincronizar más abajo).
+  WidgetsFlutterBinding.ensureInitialized();
+
   final storageService = SecureStorageService();
   final dioClient = DioClient(storageService);
   final authRepository = AuthRepository(dioClient, storageService);

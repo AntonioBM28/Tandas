@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
 /// Un mensaje recibido del otro lado del puente (celular <-> reloj).
@@ -28,10 +29,12 @@ class WearBridge {
     if (_initialized) return;
     _initialized = true;
     _channel.setMethodCallHandler((call) async {
+      debugPrint('[WearBridge] llamada nativa recibida: ${call.method}');
       if (call.method == 'mensajeRecibido') {
         final args = Map<String, dynamic>.from(call.arguments as Map);
         final ruta = args['ruta'] as String? ?? '';
         final datosRaw = args['datos'] as String? ?? '{}';
+        debugPrint('[WearBridge] mensaje recibido: ruta=$ruta datos=$datosRaw');
         Map<String, dynamic> datos;
         try {
           datos = Map<String, dynamic>.from(jsonDecode(datosRaw) as Map);
@@ -54,13 +57,16 @@ class WearBridge {
   /// 'tanda/sync' o 'pago/reportar'), con [datos] como payload.
   static Future<void> enviar(String ruta, Map<String, dynamic> datos) async {
     _ensureInitialized();
+    debugPrint('[WearBridge] enviando ruta=$ruta datos=${jsonEncode(datos)}');
     try {
       await _channel.invokeMethod('enviarMensaje', {
         'ruta': ruta,
         'datos': jsonEncode(datos),
       });
-    } on PlatformException {
+      debugPrint('[WearBridge] enviarMensaje($ruta) OK (canal nativo respondió)');
+    } on PlatformException catch (e) {
       // Sin Play Services o sin dispositivo conectado: no es un error fatal.
+      debugPrint('[WearBridge] enviarMensaje($ruta) falló: ${e.code} ${e.message}');
     }
   }
 }

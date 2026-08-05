@@ -53,4 +53,18 @@ class AuthProvider with ChangeNotifier {
     await _authRepository.logout();
     notifyListeners();
   }
+
+  Future<bool> confirmarCodigoDispositivo(String codigo) async {
+    _setLoading(true);
+    _setError(null);
+    try {
+      await _authRepository.confirmarCodigoDispositivo(codigo);
+      _setLoading(false);
+      return true;
+    } catch (e) {
+      _setError(e.toString().replaceAll('Exception: ', ''));
+      _setLoading(false);
+      return false;
+    }
+  }
 }
