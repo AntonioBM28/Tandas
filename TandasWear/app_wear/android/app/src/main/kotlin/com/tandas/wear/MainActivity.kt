@@ -1,6 +1,12 @@
 package com.tandas.wear
 
+import android.Manifest
+import android.content.pm.PackageManager
+import android.os.Build
+import android.os.Bundle
 import androidx.annotation.NonNull
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
 import com.google.android.gms.wearable.MessageClient
 import com.google.android.gms.wearable.MessageEvent
 import com.google.android.gms.wearable.Wearable
@@ -15,6 +21,23 @@ import io.flutter.plugin.common.MethodChannel
 class MainActivity : FlutterActivity(), MessageClient.OnMessageReceivedListener {
     private val channelName = "com.tandas.wear/mensajes"
     private var methodChannel: MethodChannel? = null
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        // En Android 12+ (API 31) BLUETOOTH_CONNECT es un permiso "dangerous":
+        // declararlo en el manifest no basta, hay que pedirlo en tiempo de
+        // ejecución o las llamadas a Wearable.* truenan con SecurityException.
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S &&
+            ContextCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_CONNECT)
+                != PackageManager.PERMISSION_GRANTED
+        ) {
+            ActivityCompat.requestPermissions(
+                this,
+                arrayOf(Manifest.permission.BLUETOOTH_CONNECT),
+                REQUEST_BLUETOOTH_CONNECT,
+            )
+        }
+    }
 
     override fun configureFlutterEngine(@NonNull flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
@@ -61,5 +84,9 @@ class MainActivity : FlutterActivity(), MessageClient.OnMessageReceivedListener 
                 messageClient.sendMessage(node.id, ruta, datos.toByteArray(Charsets.UTF_8))
             }
         }
+    }
+
+    companion object {
+        private const val REQUEST_BLUETOOTH_CONNECT = 1001
     }
 }

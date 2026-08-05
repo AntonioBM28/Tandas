@@ -19,9 +19,12 @@ class WearNotificacionesState extends ChangeNotifier {
   /// Empieza a escuchar al celular y le pide los datos más recientes.
   /// Se llama una sola vez, al arrancar la app.
   void iniciar() {
+    debugPrint('[WearNotificacionesState] iniciar(): escuchando y pidiendo sync');
     WearBridge.mensajes.listen((mensaje) {
+      debugPrint('[WearNotificacionesState] mensaje recibido: ${mensaje.ruta}');
       if (mensaje.ruta != rutaTandaSync) return;
       final payload = TandaSyncPayload.fromJson(mensaje.datos);
+      debugPrint('[WearNotificacionesState] sync con ${payload.items.length} item(s)');
       _items = _ordenarPorUrgencia(payload.items);
       _ultimaSync = payload.generadoEn;
       _reportando.clear();
