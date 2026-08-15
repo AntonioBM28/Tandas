@@ -49,6 +49,14 @@ export class TandasController {
     return this.tandasService.findOne(id, usuario.sub);
   }
 
+  @Get(':id/pantalla-publica')
+  pantallaPublica(
+    @Param('id', ParseUUIDPipe) id: string,
+    @UsuarioActual() usuario: JwtPayload,
+  ) {
+    return this.tandasService.pantallaPublica(id, usuario.sub);
+  }
+
   @Patch(':id')
   update(
     @Param('id', ParseUUIDPipe) id: string,

@@ -153,6 +153,82 @@ export class TandasService {
   }
 
   /**
+   * 3b. GET /tandas/:id/pantalla-publica
+   * Vista resumida pensada para una pantalla grande (TV) durante una
+   * reunión: solo el ciclo vigente y quién ya pagó, sin arrastrar el
+   * historial completo de ciclos que sí trae la vista de detalle normal.
+   */
+  async pantallaPublica(id: string, usuarioId: string) {
+    const tanda = await this.prisma.tanda.findUnique({
+      where: { id },
+      include: {
+        miembros: { select: { usuarioId: true } },
+        ciclos: {
+          orderBy: { numeroCiclo: 'desc' },
+          take: 1,
+          include: {
+            turnoBeneficiario: {
+              include: {
+                usuario: { select: { id: true, nombre: true, fotoPerfil: true } },
+              },
+            },
+            pagos: {
+              include: {
+                miembroTanda: {
+                  include: {
+                    usuario: { select: { id: true, nombre: true, fotoPerfil: true } },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!tanda) throw new NotFoundException('Tanda no encontrada');
+
+    const isMember = tanda.miembros.some((m) => m.usuarioId === usuarioId);
+    if (!isMember && tanda.adminId !== usuarioId) {
+      throw new ForbiddenException('No tienes acceso a esta tanda');
+    }
+
+    const cicloActual = tanda.ciclos[0] ?? null;
+
+    return {
+      tanda: {
+        id: tanda.id,
+        nombre: tanda.nombre,
+        montoAportacion: tanda.montoAportacion,
+        frecuencia: tanda.frecuencia,
+        numParticipantes: tanda.numParticipantes,
+        estado: tanda.estado,
+      },
+      cicloActual: cicloActual && {
+        numeroCiclo: cicloActual.numeroCiclo,
+        fechaLimite: cicloActual.fechaLimite,
+        cerrado: cicloActual.cerrado,
+        montoTotalCiclo: tanda.numParticipantes * Number(tanda.montoAportacion),
+        beneficiario: cicloActual.turnoBeneficiario.usuario,
+        pagos: cicloActual.pagos.map((p) => ({
+          miembroTandaId: p.miembroTandaId,
+          nombre: p.miembroTanda.usuario.nombre,
+          fotoPerfil: p.miembroTanda.usuario.fotoPerfil,
+          estado: p.estado,
+          monto: p.monto,
+        })),
+        resumen: {
+          total: cicloActual.pagos.length,
+          pagados: cicloActual.pagos.filter((p) => p.estado === 'PAGADO').length,
+          reportados: cicloActual.pagos.filter((p) => p.estado === 'REPORTADO').length,
+          pendientes: cicloActual.pagos.filter((p) => p.estado === 'PENDIENTE').length,
+          atrasados: cicloActual.pagos.filter((p) => p.estado === 'ATRASADO').length,
+        },
+      },
+    };
+  }
+
+  /**
    * 4. PATCH /tandas/:id
    */
   async update(id: string, dto: UpdateTandaDto, usuarioId: string): Promise<Tanda> {

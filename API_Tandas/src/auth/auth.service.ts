@@ -10,7 +10,7 @@ import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../prisma/prisma.service';
 import { RegistroDto } from './dto/registro.dto';
 import * as bcrypt from 'bcrypt';
-import { Usuario, EstadoCodigoDispositivo, Prisma } from '@prisma/client';
+import { Usuario, EstadoCodigoDispositivo, TipoDispositivo, Prisma } from '@prisma/client';
 
 export interface PublicUser {
   id: string;
@@ -98,12 +98,14 @@ export class AuthService {
       });
 
       let validTokenId: string | null = null;
+      let tipoDispositivo: TipoDispositivo | null = null;
 
       // 3. Compare hash
       for (const stored of storedTokens) {
         const matches = await bcrypt.compare(rawRefreshToken, stored.tokenHash);
         if (matches && new Date() < stored.expiraEn) {
           validTokenId = stored.id;
+          tipoDispositivo = stored.tipoDispositivo;
           break;
         }
       }
@@ -126,7 +128,9 @@ export class AuthService {
         throw new UnauthorizedException('Usuario no encontrado');
       }
 
-      return this.generateAuthResponse(usuario);
+      // El nuevo token hereda el tipo del que reemplaza, para que una sesión
+      // de reloj/TV no se "olvide" de serlo al refrescar.
+      return this.generateAuthResponse(usuario, tipoDispositivo ?? undefined);
     } catch (e) {
       throw new UnauthorizedException('Refresh token inválido o expirado');
     }
@@ -160,11 +164,13 @@ export class AuthService {
   }
 
   /**
-   * Un dispositivo sin teclado cómodo (el reloj) pide un código de 6
+   * Un dispositivo sin teclado cómodo (el reloj, la TV) pide un código de 6
    * dígitos, vigente unos minutos, para que el usuario lo confirme desde
    * un dispositivo donde ya tiene sesión (el celular).
    */
-  async generarCodigoDispositivo(): Promise<{ codigo: string; expiraEn: Date }> {
+  async generarCodigoDispositivo(
+    tipoDispositivo: TipoDispositivo = TipoDispositivo.RELOJ,
+  ): Promise<{ codigo: string; expiraEn: Date; tipoDispositivo: TipoDispositivo }> {
     const expiraEn = new Date();
     expiraEn.setMinutes(expiraEn.getMinutes() + 10);
 
@@ -172,9 +178,9 @@ export class AuthService {
       const codigo = Math.floor(100000 + Math.random() * 900000).toString();
       try {
         const creado = await this.prisma.codigoDispositivo.create({
-          data: { codigo, expiraEn },
+          data: { codigo, expiraEn, tipoDispositivo },
         });
-        return { codigo: creado.codigo, expiraEn: creado.expiraEn };
+        return { codigo: creado.codigo, expiraEn: creado.expiraEn, tipoDispositivo: creado.tipoDispositivo };
       } catch (error) {
         if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
           continue; // código ya en uso, intenta con otro
@@ -231,14 +237,17 @@ export class AuthService {
       return { estado: 'PENDIENTE' };
     }
 
-    const authResponse = await this.generateAuthResponse(registro.usuario);
+    const authResponse = await this.generateAuthResponse(registro.usuario, registro.tipoDispositivo);
     // Un solo uso: ya se entregaron los tokens, el código deja de servir.
     await this.prisma.codigoDispositivo.delete({ where: { id: registro.id } });
 
     return { estado: 'CONFIRMADO', ...authResponse };
   }
 
-  private async generateAuthResponse(usuario: Usuario): Promise<AuthResponse> {
+  private async generateAuthResponse(
+    usuario: Usuario,
+    tipoDispositivo?: TipoDispositivo,
+  ): Promise<AuthResponse> {
     const payload = { sub: usuario.id, email: usuario.email };
 
     // Access token (short lived)
@@ -260,6 +269,7 @@ export class AuthService {
       data: {
         tokenHash,
         usuarioId: usuario.id,
+        tipoDispositivo,
         expiraEn,
       },
     });

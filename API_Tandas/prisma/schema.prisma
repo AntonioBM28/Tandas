@@ -80,28 +80,40 @@ enum EstadoCodigoDispositivo {
   CONFIRMADO
 }
 
+// Qué tipo de dispositivo sin teclado cómodo se está vinculando. Permite
+// diferenciar sesiones del reloj y de la TV (p.ej. para un futuro listado
+// de "dispositivos vinculados" desde el celular).
+enum TipoDispositivo {
+  RELOJ
+  TV
+}
+
 // Código corto de un solo uso para vincular un dispositivo sin teclado
-// cómodo (el reloj) a la sesión de un usuario ya logueado en el celular.
+// cómodo (el reloj, la TV) a la sesión de un usuario ya logueado en el celular.
 model CodigoDispositivo {
-  id        String                   @id @default(uuid())
-  codigo    String                   @unique
-  estado    EstadoCodigoDispositivo  @default(PENDIENTE)
-  usuarioId String?                  @map("usuario_id")
-  usuario   Usuario?                 @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
-  expiraEn  DateTime                 @map("expira_en")
-  createdAt DateTime                 @default(now()) @map("created_at")
+  id              String                   @id @default(uuid())
+  codigo          String                   @unique
+  estado          EstadoCodigoDispositivo  @default(PENDIENTE)
+  tipoDispositivo TipoDispositivo          @default(RELOJ) @map("tipo_dispositivo")
+  usuarioId       String?                  @map("usuario_id")
+  usuario         Usuario?                 @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  expiraEn        DateTime                 @map("expira_en")
+  createdAt       DateTime                 @default(now()) @map("created_at")
 
   @@map("codigos_dispositivo")
 }
 
 model TokenRefresco {
-  id          String   @id @default(uuid())
-  tokenHash   String   @map("token_hash")
-  usuarioId   String   @map("usuario_id")
-  usuario     Usuario  @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
-  revocado    Boolean  @default(false)
-  expiraEn    DateTime @map("expira_en")
-  createdAt   DateTime @default(now()) @map("created_at")
+  id              String            @id @default(uuid())
+  tokenHash       String            @map("token_hash")
+  usuarioId       String            @map("usuario_id")
+  usuario         Usuario           @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  // Null para sesiones normales (celular); se marca solo cuando la sesión
+  // nace de un CodigoDispositivo confirmado (reloj o TV).
+  tipoDispositivo TipoDispositivo?  @map("tipo_dispositivo")
+  revocado        Boolean           @default(false)
+  expiraEn        DateTime          @map("expira_en")
+  createdAt       DateTime          @default(now()) @map("created_at")
 
   @@index([usuarioId])
   @@map("tokens_refresco")

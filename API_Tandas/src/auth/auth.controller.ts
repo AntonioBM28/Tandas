@@ -15,6 +15,7 @@ import { RegistroDto } from './dto/registro.dto';
 import { LoginDto } from './dto/login.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { ConfirmarCodigoDispositivoDto } from './dto/codigo-dispositivo.dto';
+import { GenerarCodigoDispositivoDto } from './dto/generar-codigo-dispositivo.dto';
 import { UsuarioActual } from './decorators/usuario-actual.decorator';
 import { Usuario } from '@prisma/client';
 import { JwtPayload } from './strategies/jwt.strategy';
@@ -59,8 +60,8 @@ export class AuthController {
 
   @Post('dispositivo/generar-codigo')
   @HttpCode(HttpStatus.OK)
-  async generarCodigoDispositivo() {
-    return this.authService.generarCodigoDispositivo();
+  async generarCodigoDispositivo(@Body() dto: GenerarCodigoDispositivoDto) {
+    return this.authService.generarCodigoDispositivo(dto?.tipoDispositivo);
   }
 
   @UseGuards(JwtAuthGuard)
